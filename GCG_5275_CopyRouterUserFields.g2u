@@ -1,0 +1,88 @@
+Program.Sub.Preflight.Start
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+'Precision Edge Surgical Products Co, LLC
+'GCG_5275_CopyRouterUserFields
+'GaryB 10/12/2018
+'This project will copy the custom router user information from tables gcg_5032_rtr_user_f, gcg_5032_rtr_user_t if the copied router has them. 
+'This runs from the pre-save hook on the Router Copy screen hook# 11151.
+F.Intrinsic.Control.SelectCase(V.Caller.Hook)
+	F.Intrinsic.Control.Case(11151)
+		F.Intrinsic.Control.CallSub(CopyAdditionalUserFields)		
+F.Intrinsic.Control.EndSelect
+
+Program.Sub.Main.End
+
+Program.Sub.CopyAdditionalUserFields.Start
+F.Intrinsic.Control.Try
+V.Local.sError.Declare
+v.Local.bTableNotes.Declare(Boolean)
+v.Local.sFromRouter.Declare(String)
+v.Local.sToRouter.Declare(String)
+v.Local.sSql.Declare(String)
+v.Local.sRetNotes.Declare(String)
+'the from router is in fields below on the router copy screen
+F.Intrinsic.String.GSSPartString(v.Passed.000003, v.Passed.000004, v.Local.sFromRouter)
+'the to router is in fields below on the router copy screen
+F.Intrinsic.String.GSSPartString(v.Passed.000006, v.Passed.000007, v.Local.sToRouter)
+'make sure tables exist, if they don't then there is no need to try and copy the custom user fields
+F.Intrinsic.Control.CallSub(OpenConnection)
+'Check to see if the gcg_5032_rtr_user_f table exists if it doesn't then we can exit since there is nothing to copy.
+F.ODBC.Connection!con.TableExists("GCG_5032_RTR_USER_F",V.Local.bTableNotes)
+F.Intrinsic.Control.If(V.Local.bTableNotes,=,True)
+   F.Intrinsic.String.Build("Select TOP 1 * from GCG_5032_RTR_USER_F where router  = '{0}' ", v.Local.sFromRouter, v.Local.sSQL)
+   f.Data.DataTable.CreateFromSQL("dtUserFields","con",v.Local.sSql)
+   F.Intrinsic.Control.If(V.DataTable.dtUserFIelds.RowCount,>,0)
+      f.Data.DataTable.SetValue("dtUserFields",0,"router",v.Local.sToRouter)
+'need to use mode 128 and an empty key so this will fill in all the values from the table   
+      f.Data.DataTable.SaveToDB("dtUserFields","con","GCG_5032_RTR_USER_F","",128)
+   f.Intrinsic.Control.EndIf
+f.Intrinsic.Control.EndIf   
+'Check to see if the gcg_5032_rtr_user_t table exists if it doesn't then we can exit since there is nothing to copy.
+F.ODBC.Connection!con.TableExists("GCG_5032_RTR_USER_T",V.Local.bTableNotes)
+F.Intrinsic.Control.If(V.Local.bTableNotes,=,True)
+   F.Intrinsic.String.Build("Select TOP 1 * from GCG_5032_RTR_USER_T where router  = '{0}' ", v.Local.sFromRouter, v.Local.sSQL)
+   f.Data.DataTable.CreateFromSQL("dtTitleFields","con",v.Local.sSql)
+   F.Intrinsic.Control.If(V.DataTable.dtTitleFIelds.RowCount,>,0)
+      f.Data.DataTable.SetValue("dttitleFields",0,"router",v.Local.sToRouter)
+'need to use mode 128 and an empty key so this will fill in all the values from the table   
+      f.Data.DataTable.SaveToDB("dtTitleFields","con","GCG_5032_RTR_USER_T","",128)
+   f.Intrinsic.Control.EndIf
+f.Intrinsic.Control.EndIf   
+
+F.Intrinsic.Control.CallSub(CloseConnection)
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.End
+F.Intrinsic.Control.EndTry
+
+Program.Sub.CopyAdditionalUserFields.End
+
+Program.Sub.OpenConnection.Start
+F.Intrinsic.Control.Try
+V.Local.sError.Declare
+
+F.ODBC.Connection!con.OpenCompanyConnection
+	
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.End
+F.Intrinsic.Control.EndTry
+Program.Sub.OpenConnection.End
+
+Program.Sub.CloseConnection.Start
+F.Intrinsic.Control.Try
+V.Local.sError.Declare
+	
+F.ODBC.Connection!con.Close
+	
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.End
+F.Intrinsic.Control.EndTry
+Program.Sub.CloseConnection.End
